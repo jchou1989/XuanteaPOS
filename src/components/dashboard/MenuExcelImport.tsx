@@ -16,6 +16,7 @@ import * as XLSX from "xlsx";
 
 interface MenuItem {
   id: string;
+  beverageId?: string;
   name: string;
   price: number;
   description: string;
@@ -48,6 +49,7 @@ const MenuExcelImport = ({ onImport, menuItems }: MenuExcelImportProps) => {
     const headers = [
       "Category",
       "Name",
+      "Beverage ID",
       "Size",
       "Sugar Level",
       "Ice Level",
@@ -69,6 +71,7 @@ const MenuExcelImport = ({ onImport, menuItems }: MenuExcelImportProps) => {
         return [
           item.category || "",
           item.name,
+          item.beverageId || "",
           sizes,
           sugarLevels,
           iceLevels,
@@ -112,6 +115,7 @@ const MenuExcelImport = ({ onImport, menuItems }: MenuExcelImportProps) => {
         const headerMap: { [key: string]: string } = {
           category: "category",
           name: "name",
+          "beverage id": "beverageId",
           size: "sizes",
           "sugar level": "sugarLevels",
           "ice level": "iceLevels",
@@ -163,6 +167,9 @@ const MenuExcelImport = ({ onImport, menuItems }: MenuExcelImportProps) => {
             switch (mappedHeader) {
               case "name":
                 item.name = String(value);
+                break;
+              case "beverageId":
+                item.beverageId = String(value);
                 break;
               case "price":
                 item.price =
