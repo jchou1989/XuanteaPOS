@@ -196,7 +196,7 @@ const MenuItemForm = ({
         required?: boolean;
         multiSelect?: boolean;
       },
-    ]);
+    ] as FormValues["customizationOptions"]);
   };
 
   const removeCustomizationOption = (index: number) => {
