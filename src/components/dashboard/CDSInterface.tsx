@@ -104,6 +104,10 @@ const CDSInterface = ({
     useState<string>("");
   const [isCustomerInfoSet, setIsCustomerInfoSet] = useState(true); // Set to true by default to skip the dialog
   const [isPayNowSelected, setIsPayNowSelected] = useState(false);
+  // Add state to store menu items received from MenuManagement
+  const [menuItemsFromContext, setMenuItemsFromContext] = useState<MenuItem[]>(
+    [],
+  );
 
   // Sample menu items to use if no menu items are available in context
   const sampleMenuItems: MenuItem[] = [
@@ -210,10 +214,13 @@ const CDSInterface = ({
   ];
 
   // Always use menu items from context if available, otherwise use sample items
+  // If we have received menu items from MenuManagement via the event, use those instead
   const effectiveMenuItems =
-    menuContext?.menuItems?.length > 0
-      ? menuContext.menuItems
-      : sampleMenuItems;
+    menuItemsFromContext.length > 0
+      ? menuItemsFromContext
+      : menuContext?.menuItems?.length > 0
+        ? menuContext.menuItems
+        : sampleMenuItems;
 
   // Request menu items if not available
   useEffect(() => {
@@ -247,7 +254,7 @@ const CDSInterface = ({
     );
     window.dispatchEvent(new CustomEvent("request-menu-items"));
 
-    // Set up a periodic refresh of menu items every 30 minutes
+    // Set up a periodic refresh of menu items every 5 minutes
     const menuRefreshInterval = setInterval(
       () => {
         if (menuContext) {
@@ -255,10 +262,12 @@ const CDSInterface = ({
           menuContext.loadMenuItems().catch((error) => {
             console.error("CDSInterface: Error refreshing menu items:", error);
           });
+          // Also request menu items from MenuManagement
+          window.dispatchEvent(new CustomEvent("request-menu-items"));
         }
       },
-      30 * 60 * 1000,
-    ); // 30 minutes
+      5 * 60 * 1000, // 5 minutes
+    );
 
     return () => clearInterval(menuRefreshInterval);
   }, [menuContext]);
@@ -282,6 +291,8 @@ const CDSInterface = ({
           "CDSInterface: Using updated menu items from MenuManagement",
           updatedMenuItems.length,
         );
+        // Store the updated menu items in state
+        setMenuItemsFromContext(updatedMenuItems);
         // This will trigger the other useEffect that organizes items by category
         setItemsByCategory({});
         setActiveCategory("");

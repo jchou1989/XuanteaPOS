@@ -154,7 +154,7 @@ export function MenuProvider({ children }: MenuProviderProps) {
 
         // Dispatch event to notify other components
         window.dispatchEvent(
-          new CustomEvent("menu-items-updated", { detail: data }),
+          new CustomEvent("menu-items-updated", { detail: transformedData }),
         );
         return;
       }
@@ -412,6 +412,29 @@ export function MenuProvider({ children }: MenuProviderProps) {
           } catch (e) {
             console.log("Error ensuring menu_items table exists:", e);
             // Continue anyway, as we'll try the upsert which might create the table
+          }
+
+          // First, delete all existing menu items in Supabase
+          try {
+            const { error: deleteError } = await supabase
+              .from("menu_items")
+              .delete()
+              .not(
+                "id",
+                "in",
+                menuItems.map((item) => item.id),
+              );
+
+            if (deleteError) {
+              console.error(
+                "Error deleting old menu items from Supabase:",
+                deleteError,
+              );
+            } else {
+              console.log("Successfully deleted old menu items from Supabase");
+            }
+          } catch (deleteError) {
+            console.error("Error during delete operation:", deleteError);
           }
 
           // Format menu items to match expected structure

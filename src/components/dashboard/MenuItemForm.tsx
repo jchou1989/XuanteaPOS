@@ -158,17 +158,35 @@ const MenuItemForm = ({
       data.beverageId = generateBeverageId(data.name + customOptionsStr);
     }
 
-    // Ensure all customization options have valid arrays
+    // Ensure all customization options have valid arrays and filter out empty options
     if (data.customizationOptions) {
-      data.customizationOptions = data.customizationOptions.map((opt) => ({
-        ...opt,
-        options: Array.isArray(opt.options) ? opt.options : [""],
-        prices: Array.isArray(opt.prices) ? opt.prices : ["0"],
-      }));
+      data.customizationOptions = data.customizationOptions
+        .filter((opt) => opt.name && opt.name.trim() !== "")
+        .map((opt) => ({
+          ...opt,
+          name: opt.name.trim(),
+          options: Array.isArray(opt.options)
+            ? opt.options.filter((o) => o !== undefined && o !== null)
+            : [""],
+          prices: Array.isArray(opt.prices)
+            ? opt.prices.filter(
+                (_, i) =>
+                  Array.isArray(opt.options) &&
+                  i < opt.options.length &&
+                  opt.options[i] !== undefined &&
+                  opt.options[i] !== null,
+              )
+            : ["0"],
+        }));
     }
 
     // Set the image from the preview
     data.image = imagePreview;
+
+    console.log(
+      "Submitting form data with customizations:",
+      data.customizationOptions,
+    );
 
     // Submit the form data directly
     onSubmit(data);

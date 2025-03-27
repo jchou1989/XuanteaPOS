@@ -142,6 +142,13 @@ const MenuManagement = ({ initialItems = [] }: MenuManagementProps) => {
     setIsSaving(true);
     setSaveSuccess(false);
 
+    // Log the incoming form data for debugging
+    console.log("Incoming form data:", formData);
+    console.log(
+      "Customization options before processing:",
+      formData.customizationOptions,
+    );
+
     // Process the form data
     const processedData = {
       ...formData,
@@ -149,14 +156,10 @@ const MenuManagement = ({ initialItems = [] }: MenuManagementProps) => {
       // Process customization options
       customizationOptions: formData.customizationOptions
         ? formData.customizationOptions.reduce((acc: any, option: any) => {
-            if (
-              option.name &&
-              Array.isArray(option.options) &&
-              option.options.length > 0
-            ) {
+            if (option.name && Array.isArray(option.options)) {
               const key = option.name.toLowerCase().replace(/\s+/g, "");
               acc[key] = option.options.filter(
-                (opt: string) => opt.trim() !== "",
+                (opt: string) => opt !== undefined && opt !== null,
               );
             }
             return acc;
@@ -173,7 +176,7 @@ const MenuManagement = ({ initialItems = [] }: MenuManagementProps) => {
               const key = option.name.toLowerCase().replace(/\s+/g, "");
               acc[key] = {};
               option.options.forEach((opt: string, index: number) => {
-                if (opt.trim() !== "") {
+                if (opt !== undefined && opt !== null) {
                   acc[key][opt] = parseFloat(option.prices[index] || "0");
                 }
               });
@@ -211,6 +214,7 @@ const MenuManagement = ({ initialItems = [] }: MenuManagementProps) => {
         const updatedItem = {
           ...processedData,
           id: editingItem.id, // Ensure ID is preserved
+          beverageId: editingItem.beverageId || processedData.beverageId, // Preserve beverageId
         };
         console.log("Updating menu item:", updatedItem);
         updateMenuItem(updatedItem);
@@ -225,7 +229,7 @@ const MenuManagement = ({ initialItems = [] }: MenuManagementProps) => {
           setEditingItem(null);
           setIsSaving(false);
           setSaveSuccess(false);
-        }, 1000);
+        }, 1500); // Increased timeout for better visibility
       } else {
         // Add new item
         const newItem = {
@@ -245,17 +249,20 @@ const MenuManagement = ({ initialItems = [] }: MenuManagementProps) => {
           setEditingItem(null);
           setIsSaving(false);
           setSaveSuccess(false);
-        }, 1000);
+        }, 1500); // Increased timeout for better visibility
       }
 
       // Explicitly broadcast menu items to all components after save
       console.log("MenuManagement: Broadcasting updated menu items after save");
-      window.dispatchEvent(
-        new CustomEvent("menu-items-updated", { detail: menuItems }),
-      );
+      setTimeout(() => {
+        window.dispatchEvent(
+          new CustomEvent("menu-items-updated", { detail: menuItems }),
+        );
+      }, 100); // Small delay to ensure state is updated
     } catch (error) {
       console.error("Error saving menu item:", error);
       setIsSaving(false);
+      setSaveSuccess(false);
     }
   };
 
@@ -391,20 +398,22 @@ const MenuManagement = ({ initialItems = [] }: MenuManagementProps) => {
             <TabsContent value="add" className="mt-0">
               <div className="relative">
                 {(isSaving || saveSuccess) && (
-                  <div className="absolute inset-0 bg-black/10 flex items-center justify-center z-10 rounded-lg">
-                    <div className="bg-white p-4 rounded-lg shadow-lg flex flex-col items-center">
+                  <div className="absolute inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-10 rounded-lg">
+                    <div className="bg-white p-6 rounded-lg shadow-lg flex flex-col items-center">
                       {isSaving && !saveSuccess && (
                         <>
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
-                          <p>Saving changes...</p>
+                          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mb-3"></div>
+                          <p className="text-lg font-medium">
+                            Saving changes...
+                          </p>
                         </>
                       )}
                       {saveSuccess && (
                         <>
-                          <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center mb-2">
+                          <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center mb-3">
                             <svg
                               xmlns="http://www.w3.org/2000/svg"
-                              className="h-5 w-5 text-green-600"
+                              className="h-6 w-6 text-green-600"
                               viewBox="0 0 20 20"
                               fill="currentColor"
                             >
@@ -415,7 +424,9 @@ const MenuManagement = ({ initialItems = [] }: MenuManagementProps) => {
                               />
                             </svg>
                           </div>
-                          <p>Item saved successfully!</p>
+                          <p className="text-lg font-medium text-green-600">
+                            Item saved successfully!
+                          </p>
                         </>
                       )}
                     </div>
