@@ -140,36 +140,96 @@ const MenuManagement = ({ initialItems = [] }: MenuManagementProps) => {
     const processedData = {
       ...formData,
       price: parseFloat(formData.price),
+      // Process customization options
+      customizationOptions: formData.customizationOptions
+        ? formData.customizationOptions.reduce((acc: any, option: any) => {
+            if (
+              option.name &&
+              Array.isArray(option.options) &&
+              option.options.length > 0
+            ) {
+              const key = option.name.toLowerCase().replace(/\s+/g, "");
+              acc[key] = option.options.filter(
+                (opt: string) => opt.trim() !== "",
+              );
+            }
+            return acc;
+          }, {})
+        : {},
+      // Process customization prices
+      customizationPrices: formData.customizationOptions
+        ? formData.customizationOptions.reduce((acc: any, option: any) => {
+            if (
+              option.name &&
+              Array.isArray(option.options) &&
+              Array.isArray(option.prices)
+            ) {
+              const key = option.name.toLowerCase().replace(/\s+/g, "");
+              acc[key] = {};
+              option.options.forEach((opt: string, index: number) => {
+                if (opt.trim() !== "") {
+                  acc[key][opt] = parseFloat(option.prices[index] || "0");
+                }
+              });
+            }
+            return acc;
+          }, {})
+        : {},
+      // Process customization required flags
+      customizationRequired: formData.customizationOptions
+        ? formData.customizationOptions.reduce((acc: any, option: any) => {
+            if (option.name) {
+              const key = option.name.toLowerCase().replace(/\s+/g, "");
+              acc[key] = !!option.required;
+            }
+            return acc;
+          }, {})
+        : {},
+      // Process multi-select flags
+      customizationMultiSelect: formData.customizationOptions
+        ? formData.customizationOptions.reduce((acc: any, option: any) => {
+            if (option.name) {
+              const key = option.name.toLowerCase().replace(/\s+/g, "");
+              acc[key] = !!option.multiSelect;
+            }
+            return acc;
+          }, {})
+        : {},
     };
 
-    let updatedItems = [...menuItems];
+    console.log("Processed form data:", processedData);
 
     if (editingItem) {
       // Update existing item
-      const updatedItem = { ...editingItem, ...processedData };
+      const updatedItem = {
+        ...processedData,
+        id: editingItem.id, // Ensure ID is preserved
+      };
+      console.log("Updating menu item:", updatedItem);
       updateMenuItem(updatedItem);
-      updatedItems = menuItems.map((item) =>
-        item.id === updatedItem.id ? updatedItem : item,
-      );
+
+      // Force a refresh of the menu items list
+      setActiveTab("list");
+      setEditingItem(null);
     } else {
       // Add new item
       const newItem = {
         ...processedData,
         id: `${Date.now()}`, // Generate a temporary ID
       };
+      console.log("Adding new menu item:", newItem);
       addMenuItem(newItem);
-      updatedItems = [...menuItems, newItem];
-    }
 
-    // Force a refresh of the menu items list
-    setActiveTab("list");
-    setEditingItem(null);
+      // Force a refresh of the menu items list
+      setActiveTab("list");
+      setEditingItem(null);
+    }
 
     // Explicitly broadcast menu items to all components after save
     console.log("MenuManagement: Broadcasting updated menu items after save");
     setTimeout(() => {
       window.dispatchEvent(
-        new CustomEvent("menu-items-updated", { detail: updatedItems }),
+        new CustomEvent("menu-items-updated", { detail: menuItems }),
       );
     }, 100);
   };
@@ -332,16 +392,24 @@ const MenuManagement = ({ initialItems = [] }: MenuManagementProps) => {
                                 name: formattedKey,
                                 options: options || [],
                                 prices: editingItem.customizationPrices?.[key]
-                                  ? options?.map((option) =>
-                                      (
-                                        editingItem.customizationPrices?.[
-                                          key
-                                        ]?.[option] || 0
-                                      ).toString(),
-                                    )
-                                  : options?.map(() => "0"),
-                                required: false, // Default to false as it doesn't exist on MenuItem
-                                multiSelect: false, // Default to false as it doesn't exist on MenuItem
+                                  ? Array.isArray(options)
+                                    ? options.map((option) =>
+                                        (
+                                          editingItem.customizationPrices?.[
+                                            key
+                                          ]?.[option] || 0
+                                        ).toString(),
+                                      )
+                                    : []
+                                  : Array.isArray(options)
+                                    ? options.map(() => "0")
+                                    : [],
+                                required:
+                                  editingItem.customizationRequired?.[key] ||
+                                  false,
+                                multiSelect:
+                                  editingItem.customizationMultiSelect?.[key] ||
+                                  false,
                               };
                             })
                           : [],

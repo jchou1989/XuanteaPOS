@@ -150,11 +150,21 @@ const MenuItemForm = ({
       const customOptionsStr = data.customizationOptions
         ? JSON.stringify(
             data.customizationOptions.map(
-              (opt) => `${opt.name}:${opt.options.join(",")}`,
+              (opt) =>
+                `${opt.name}:${Array.isArray(opt.options) ? opt.options.join(",") : ""}`,
             ),
           )
         : "";
       data.beverageId = generateBeverageId(data.name + customOptionsStr);
+    }
+
+    // Ensure all customization options have valid arrays
+    if (data.customizationOptions) {
+      data.customizationOptions = data.customizationOptions.map((opt) => ({
+        ...opt,
+        options: Array.isArray(opt.options) ? opt.options : [""],
+        prices: Array.isArray(opt.prices) ? opt.prices : ["0"],
+      }));
     }
 
     // Set the image from the preview
@@ -204,24 +214,54 @@ const MenuItemForm = ({
   const addOptionValue = (optionIndex: number) => {
     const currentOptions = form.getValues("customizationOptions") || [];
     const updatedOptions = [...currentOptions];
-    updatedOptions[optionIndex].options.push("");
-    if (updatedOptions[optionIndex].prices) {
-      updatedOptions[optionIndex].prices?.push("0");
+    if (!Array.isArray(updatedOptions[optionIndex].options)) {
+      updatedOptions[optionIndex].options = [];
     }
+    updatedOptions[optionIndex].options.push("");
+    if (!updatedOptions[optionIndex].prices) {
+      updatedOptions[optionIndex].prices = [];
+    }
+    updatedOptions[optionIndex].prices?.push("0");
     form.setValue("customizationOptions", updatedOptions);
   };
 
   const removeOptionValue = (optionIndex: number, valueIndex: number) => {
     const currentOptions = form.getValues("customizationOptions") || [];
     const updatedOptions = [...currentOptions];
-    updatedOptions[optionIndex].options = updatedOptions[
-      optionIndex
-    ].options.filter((_, i) => i !== valueIndex);
-    if (updatedOptions[optionIndex].prices) {
+
+    // Ensure options is an array
+    if (!Array.isArray(updatedOptions[optionIndex].options)) {
+      updatedOptions[optionIndex].options = [];
+    } else {
+      updatedOptions[optionIndex].options = updatedOptions[
+        optionIndex
+      ].options.filter((_, i) => i !== valueIndex);
+
+      // If we removed all options, add an empty one
+      if (updatedOptions[optionIndex].options.length === 0) {
+        updatedOptions[optionIndex].options.push("");
+      }
+    }
+
+    // Ensure prices is an array and has the same length as options
+    if (!Array.isArray(updatedOptions[optionIndex].prices)) {
+      updatedOptions[optionIndex].prices = updatedOptions[
+        optionIndex
+      ].options.map(() => "0");
+    } else {
       updatedOptions[optionIndex].prices = updatedOptions[
         optionIndex
       ].prices?.filter((_, i) => i !== valueIndex);
+
+      // Make sure prices array matches options array length
+      while (
+        (updatedOptions[optionIndex].prices?.length || 0) <
+        updatedOptions[optionIndex].options.length
+      ) {
+        updatedOptions[optionIndex].prices?.push("0");
+      }
     }
+
     form.setValue("customizationOptions", updatedOptions);
   };
 
@@ -459,167 +499,196 @@ const MenuItemForm = ({
                   </Button>
                 </div>
 
-                {form
-                  .watch("customizationOptions")
-                  ?.map((option, optionIndex) => (
-                    <div
-                      key={optionIndex}
-                      className="border rounded-md p-4 mb-4 space-y-4"
-                    >
-                      <div className="flex justify-between items-start">
-                        <Input
-                          placeholder="Option name (e.g. Size, Sugar Level)"
-                          value={option.name}
-                          onChange={(e) => {
-                            const currentOptions =
-                              form.getValues("customizationOptions") || [];
-                            const updatedOptions = [...currentOptions];
-                            updatedOptions[optionIndex].name = e.target.value;
-                            form.setValue(
-                              "customizationOptions",
-                              updatedOptions,
-                            );
-                          }}
-                          className="flex-1 mr-2"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeCustomizationOption(optionIndex)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
-                      </div>
-
-                      <div className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          id={`required-${optionIndex}`}
-                          checked={option.required}
-                          onChange={(e) => {
-                            const currentOptions =
-                              form.getValues("customizationOptions") || [];
-                            const updatedOptions = [...currentOptions];
-                            updatedOptions[optionIndex].required =
-                              e.target.checked;
-                            form.setValue(
-                              "customizationOptions",
-                              updatedOptions,
-                            );
-                          }}
-                          className="h-4 w-4"
-                        />
-                        <label
-                          htmlFor={`required-${optionIndex}`}
-                          className="text-sm"
-                        >
-                          Required
-                        </label>
-
-                        <input
-                          type="checkbox"
-                          id={`multi-${optionIndex}`}
-                          checked={option.multiSelect}
-                          onChange={(e) => {
-                            const currentOptions =
-                              form.getValues("customizationOptions") || [];
-                            const updatedOptions = [...currentOptions];
-                            updatedOptions[optionIndex].multiSelect =
-                              e.target.checked;
-                            form.setValue(
-                              "customizationOptions",
-                              updatedOptions,
-                            );
-                          }}
-                          className="h-4 w-4 ml-4"
-                        />
-                        <label
-                          htmlFor={`multi-${optionIndex}`}
-                          className="text-sm"
-                        >
-                          Allow multiple selections
-                        </label>
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <h4 className="text-sm font-medium">Option Values</h4>
+                {Array.isArray(form.watch("customizationOptions")) &&
+                  form
+                    .watch("customizationOptions")
+                    ?.map((option, optionIndex) => (
+                      <div
+                        key={optionIndex}
+                        className="border rounded-md p-4 mb-4 space-y-4"
+                      >
+                        <div className="flex justify-between items-start">
+                          <Input
+                            placeholder="Option name (e.g. Size, Sugar Level)"
+                            value={option.name}
+                            onChange={(e) => {
+                              const currentOptions =
+                                form.getValues("customizationOptions") || [];
+                              const updatedOptions = [...currentOptions];
+                              updatedOptions[optionIndex].name = e.target.value;
+                              form.setValue(
+                                "customizationOptions",
+                                updatedOptions,
+                              );
+                            }}
+                            className="flex-1 mr-2"
+                          />
                           <Button
                             type="button"
                             variant="ghost"
-                            size="sm"
-                            onClick={() => addOptionValue(optionIndex)}
-                            className="h-8 text-xs flex items-center gap-1"
+                            size="icon"
+                            onClick={() =>
+                              removeCustomizationOption(optionIndex)
+                            }
                           >
-                            <PlusCircle className="h-3 w-3" />
-                            Add Value
+                            <Trash2 className="h-4 w-4 text-red-500" />
                           </Button>
                         </div>
 
-                        {option.options.map((value, valueIndex) => (
-                          <div
-                            key={valueIndex}
-                            className="flex items-center gap-2"
+                        <div className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id={`required-${optionIndex}`}
+                            checked={option.required}
+                            onChange={(e) => {
+                              const currentOptions =
+                                form.getValues("customizationOptions") || [];
+                              const updatedOptions = [...currentOptions];
+                              updatedOptions[optionIndex].required =
+                                e.target.checked;
+                              form.setValue(
+                                "customizationOptions",
+                                updatedOptions,
+                              );
+                            }}
+                            className="h-4 w-4"
+                          />
+                          <label
+                            htmlFor={`required-${optionIndex}`}
+                            className="text-sm"
                           >
-                            <Input
-                              placeholder="Option value (e.g. Small, Medium, Large)"
-                              value={value}
-                              onChange={(e) => {
-                                const currentOptions =
-                                  form.getValues("customizationOptions") || [];
-                                const updatedOptions = [...currentOptions];
-                                updatedOptions[optionIndex].options[
-                                  valueIndex
-                                ] = e.target.value;
-                                form.setValue(
-                                  "customizationOptions",
-                                  updatedOptions,
-                                );
-                              }}
-                              className="flex-1"
-                            />
-                            <Input
-                              type="number"
-                              placeholder="+0.00"
-                              value={option.prices?.[valueIndex] || "0"}
-                              onChange={(e) => {
-                                const currentOptions =
-                                  form.getValues("customizationOptions") || [];
-                                const updatedOptions = [...currentOptions];
-                                if (!updatedOptions[optionIndex].prices) {
-                                  updatedOptions[optionIndex].prices =
-                                    option.options.map(() => "0");
-                                }
-                                if (updatedOptions[optionIndex].prices) {
-                                  updatedOptions[optionIndex].prices[
-                                    valueIndex
-                                  ] = e.target.value;
-                                }
-                                form.setValue(
-                                  "customizationOptions",
-                                  updatedOptions,
-                                );
-                              }}
-                              className="w-20"
-                            />
+                            Required
+                          </label>
+
+                          <input
+                            type="checkbox"
+                            id={`multi-${optionIndex}`}
+                            checked={option.multiSelect}
+                            onChange={(e) => {
+                              const currentOptions =
+                                form.getValues("customizationOptions") || [];
+                              const updatedOptions = [...currentOptions];
+                              updatedOptions[optionIndex].multiSelect =
+                                e.target.checked;
+                              form.setValue(
+                                "customizationOptions",
+                                updatedOptions,
+                              );
+                            }}
+                            className="h-4 w-4 ml-4"
+                          />
+                          <label
+                            htmlFor={`multi-${optionIndex}`}
+                            className="text-sm"
+                          >
+                            Allow multiple selections
+                          </label>
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <h4 className="text-sm font-medium">
+                              Option Values
+                            </h4>
                             <Button
                               type="button"
                               variant="ghost"
-                              size="icon"
-                              onClick={() =>
-                                removeOptionValue(optionIndex, valueIndex)
-                              }
-                              className="h-8 w-8"
-                              disabled={option.options.length <= 1}
+                              size="sm"
+                              onClick={() => addOptionValue(optionIndex)}
+                              className="h-8 text-xs flex items-center gap-1"
                             >
-                              <Trash2 className="h-3 w-3 text-red-500" />
+                              <PlusCircle className="h-3 w-3" />
+                              Add Value
                             </Button>
                           </div>
-                        ))}
+
+                          {Array.isArray(option.options) &&
+                            option.options.map((value, valueIndex) => (
+                              <div
+                                key={valueIndex}
+                                className="flex items-center gap-2"
+                              >
+                                <Input
+                                  placeholder="Option value (e.g. Small, Medium, Large)"
+                                  value={value}
+                                  onChange={(e) => {
+                                    const currentOptions =
+                                      form.getValues("customizationOptions") ||
+                                      [];
+                                    const updatedOptions = [...currentOptions];
+                                    if (
+                                      !Array.isArray(
+                                        updatedOptions[optionIndex].options,
+                                      )
+                                    ) {
+                                      updatedOptions[optionIndex].options = [];
+                                    }
+                                    updatedOptions[optionIndex].options[
+                                      valueIndex
+                                    ] = e.target.value;
+                                    form.setValue(
+                                      "customizationOptions",
+                                      updatedOptions,
+                                    );
+                                  }}
+                                  className="flex-1"
+                                />
+                                <Input
+                                  type="number"
+                                  placeholder="+0.00"
+                                  value={option.prices?.[valueIndex] || "0"}
+                                  onChange={(e) => {
+                                    const currentOptions =
+                                      form.getValues("customizationOptions") ||
+                                      [];
+                                    const updatedOptions = [...currentOptions];
+                                    if (!updatedOptions[optionIndex].prices) {
+                                      updatedOptions[optionIndex].prices =
+                                        Array.isArray(option.options)
+                                          ? option.options.map(() => "0")
+                                          : [];
+                                    }
+                                    if (updatedOptions[optionIndex].prices) {
+                                      updatedOptions[optionIndex].prices[
+                                        valueIndex
+                                      ] = e.target.value;
+                                    }
+                                    form.setValue(
+                                      "customizationOptions",
+                                      updatedOptions,
+                                    );
+                                  }}
+                                  className="w-20"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() =>
+                                    removeOptionValue(optionIndex, valueIndex)
+                                  }
+                                  className="h-8 w-8"
+                                  disabled={
+                                    !Array.isArray(option.options) ||
+                                    option.options.length <= 1
+                                  }
+                                >
+                                  <Trash2 className="h-3 w-3 text-red-500" />
+                                </Button>
+                              </div>
+                            ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                {(!Array.isArray(form.watch("customizationOptions")) ||
+                  form.watch("customizationOptions")?.length === 0) && (
+                  <div className="text-center p-4 border border-dashed rounded-md">
+                    <p className="text-muted-foreground">
+                      No customization options added yet. Click "Add Option" to
+                      create one.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 
