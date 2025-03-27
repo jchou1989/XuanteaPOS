@@ -693,9 +693,593 @@ const POSSystem = ({ menuItems = [] }: POSSystemProps) => {
 
   // Return the component UI here
   return (
-    <div className="bg-white">
-      {/* Component UI would go here */}
-      <div>POS System Component</div>
+    <div className="flex h-screen bg-white">
+      {/* Main content */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <header className="bg-white border-b border-gray-200 p-4">
+          <h1></h1>
+        </header>
+
+        {/* Main POS area */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Menu items section */}
+          <div className="w-2/3 p-4 overflow-auto">
+            <div className="mb-4">
+              <div className="relative">
+                <Search
+                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                  size={18}
+                />
+                <Input
+                  placeholder="Search menu items..."
+                  className="pl-10"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <Tabs
+              defaultValue={activeCategory || categories[0]?.id || ""}
+              className="w-full"
+            >
+              <TabsList className="mb-4 flex overflow-x-auto">
+                {categories.map((category) => (
+                  <TabsTrigger
+                    key={category.id}
+                    value={category.id}
+                    onClick={() => setActiveCategory(category.id)}
+                    className="px-4 py-2"
+                  >
+                    {category.name}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+
+              {isSearching ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {filteredItems.length > 0 ? (
+                    filteredItems.map((item) => (
+                      <Card
+                        key={item.id}
+                        className="cursor-pointer hover:shadow-md transition-shadow"
+                        onClick={() => addToCartDirectly(item)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="aspect-square bg-gray-100 rounded-md mb-2 flex items-center justify-center">
+                            {item.image ? (
+                              <img
+                                src={item.image}
+                                alt={item.name}
+                                className="object-cover w-full h-full rounded-md"
+                              />
+                            ) : (
+                              <div className="text-gray-400">No image</div>
+                            )}
+                          </div>
+                          <h3 className="font-medium">{item.name}</h3>
+                          <p className="text-sm text-gray-500 truncate">
+                            {item.description}
+                          </p>
+                          <p className="font-semibold mt-1">
+                            ${item.price.toFixed(2)}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <div className="col-span-full text-center py-8">
+                      <AlertCircle className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                      <p>No items found matching "{searchQuery}"</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                Object.entries(itemsByCategory).map(([categoryId, items]) => (
+                  <TabsContent
+                    key={categoryId}
+                    value={categoryId}
+                    className="mt-0"
+                  >
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                      {items.map((item) => (
+                        <Card
+                          key={item.id}
+                          className="cursor-pointer hover:shadow-md transition-shadow"
+                          onClick={() => addToCartDirectly(item)}
+                        >
+                          <CardContent className="p-4">
+                            <div className="aspect-square bg-gray-100 rounded-md mb-2 flex items-center justify-center">
+                              {item.image ? (
+                                <img
+                                  src={item.image}
+                                  alt={item.name}
+                                  className="object-cover w-full h-full rounded-md"
+                                />
+                              ) : (
+                                <div className="text-gray-400">No image</div>
+                              )}
+                            </div>
+                            <h3 className="font-medium">{item.name}</h3>
+                            <p className="text-sm text-gray-500 truncate">
+                              {item.description}
+                            </p>
+                            <p className="font-semibold mt-1">
+                              ${item.price.toFixed(2)}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </TabsContent>
+                ))
+              )}
+            </Tabs>
+          </div>
+
+          {/* Cart section */}
+          <div className="w-1/3 border-l border-gray-200 flex flex-col bg-gray-50">
+            <div className="p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold mb-1">Current Order</h2>
+              <p className="text-sm text-gray-500">
+                {cart.length === 0
+                  ? "No items added"
+                  : `${cart.length} item${cart.length !== 1 ? "s" : ""}`}
+              </p>
+            </div>
+
+            <ScrollArea className="flex-1 p-4">
+              {cart.length > 0 ? (
+                <div className="space-y-3">
+                  {cart.map((item, index) => (
+                    <div
+                      key={`${item.id}-${index}`}
+                      className="flex items-start bg-white p-3 rounded-md shadow-sm"
+                    >
+                      <div className="flex-1">
+                        <div className="flex justify-between">
+                          <h3 className="font-medium">{item.name}</h3>
+                          <button
+                            onClick={() => removeFromCart(index)}
+                            className="text-gray-400 hover:text-gray-600"
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+
+                        {item.selectedOptions &&
+                          Object.keys(item.selectedOptions).length > 0 && (
+                            <div className="mt-1 text-xs text-gray-500">
+                              {Object.entries(item.selectedOptions).map(
+                                ([key, value]) => (
+                                  <div key={key}>
+                                    <span className="font-medium">{key}:</span>{" "}
+                                    {Array.isArray(value)
+                                      ? value.join(", ")
+                                      : value}
+                                  </div>
+                                ),
+                              )}
+                            </div>
+                          )}
+
+                        <div className="flex items-center mt-2">
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-6 w-6 rounded-full"
+                            onClick={() => removeFromCart(index)}
+                          >
+                            <Minus size={12} />
+                          </Button>
+                          <span className="mx-2 min-w-8 text-center">
+                            {item.quantity}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-6 w-6 rounded-full"
+                            onClick={() => increaseCartItemQuantity(index)}
+                          >
+                            <Plus size={12} />
+                          </Button>
+                          <div className="ml-auto font-medium">
+                            ${item.totalPrice.toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <ShoppingCart className="mx-auto h-8 w-8 text-gray-300 mb-2" />
+                  <p>Your cart is empty</p>
+                  <p className="text-sm mt-1">Add items from the menu</p>
+                </div>
+              )}
+            </ScrollArea>
+
+            <div className="p-4 border-t border-gray-200">
+              <div className="flex justify-between mb-2">
+                <span>Subtotal</span>
+                <span>${calculateTotal().toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between mb-4">
+                <span>Tax (5%)</span>
+                <span>${(calculateTotal() * 0.05).toFixed(2)}</span>
+              </div>
+              <Separator className="my-2" />
+              <div className="flex justify-between mb-4 font-semibold text-lg">
+                <span>Total</span>
+                <span>${(calculateTotal() * 1.05).toFixed(2)}</span>
+              </div>
+
+              <Button
+                className="w-full"
+                size="lg"
+                disabled={cart.length === 0}
+                onClick={handleCheckout}
+              >
+                Checkout
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Customization Dialog */}
+      <Dialog
+        open={isCustomizationDialogOpen}
+        onOpenChange={setIsCustomizationDialogOpen}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Customize {selectedItem?.name}</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 my-4">
+            {selectedItem?.customizationOptions &&
+              Object.entries(selectedItem.customizationOptions).map(
+                ([key, options]) => {
+                  const isRequired =
+                    selectedItem.customizationRequired?.[key] || false;
+                  const isMultiSelect =
+                    selectedItem.customizationMultiSelect?.[key] || false;
+
+                  return (
+                    <div key={key} className="space-y-2">
+                      <Label className="flex items-center">
+                        {key}
+                        {isRequired && (
+                          <span className="text-red-500 ml-1">*</span>
+                        )}
+                      </Label>
+
+                      {isMultiSelect ? (
+                        // Multi-select options (checkboxes)
+                        <div className="space-y-2">
+                          {options?.map((option) => (
+                            <div
+                              key={option}
+                              className="flex items-center space-x-2"
+                            >
+                              <Checkbox
+                                id={`${key}-${option}`}
+                                checked={
+                                  Array.isArray(customizationSelections[key]) &&
+                                  (
+                                    customizationSelections[key] as string[]
+                                  ).includes(option)
+                                }
+                                onCheckedChange={(checked) => {
+                                  setCustomizationSelections((prev) => {
+                                    const currentSelections = Array.isArray(
+                                      prev[key],
+                                    )
+                                      ? [...(prev[key] as string[])]
+                                      : [];
+
+                                    if (checked) {
+                                      return {
+                                        ...prev,
+                                        [key]: [...currentSelections, option],
+                                      };
+                                    } else {
+                                      return {
+                                        ...prev,
+                                        [key]: currentSelections.filter(
+                                          (item) => item !== option,
+                                        ),
+                                      };
+                                    }
+                                  });
+                                }}
+                              />
+                              <Label
+                                htmlFor={`${key}-${option}`}
+                                className="text-sm font-normal cursor-pointer"
+                              >
+                                {option}
+                                {selectedItem.customizationPrices?.[key]?.[
+                                  option
+                                ] > 0 &&
+                                  ` (+${selectedItem.customizationPrices[key][option].toFixed(2)})`}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        // Single-select options (radio buttons)
+                        <RadioGroup
+                          value={(customizationSelections[key] as string) || ""}
+                          onValueChange={(value) => {
+                            setCustomizationSelections((prev) => ({
+                              ...prev,
+                              [key]: value,
+                            }));
+                          }}
+                        >
+                          {options?.map((option) => (
+                            <div
+                              key={option}
+                              className="flex items-center space-x-2"
+                            >
+                              <RadioGroupItem
+                                value={option}
+                                id={`${key}-${option}`}
+                              />
+                              <Label
+                                htmlFor={`${key}-${option}`}
+                                className="text-sm font-normal cursor-pointer"
+                              >
+                                {option}
+                                {selectedItem.customizationPrices?.[key]?.[
+                                  option
+                                ] > 0 &&
+                                  ` (+${selectedItem.customizationPrices[key][option].toFixed(2)})`}
+                              </Label>
+                            </div>
+                          ))}
+                        </RadioGroup>
+                      )}
+                    </div>
+                  );
+                },
+              )}
+          </div>
+
+          <DialogFooter className="flex justify-between">
+            <Button
+              variant="outline"
+              onClick={() => setIsCustomizationDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={addToCart}>
+              Add to Order - $
+              {selectedItem
+                ? calculateItemPrice(
+                    selectedItem,
+                    customizationSelections,
+                  ).toFixed(2)
+                : "0.00"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Dialog */}
+      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Payment</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 my-4">
+            <div className="text-center mb-4">
+              <p className="text-2xl font-bold">
+                ${(calculateTotal() * 1.05).toFixed(2)}
+              </p>
+              <p className="text-sm text-gray-500">Total Amount</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Select Payment Method</Label>
+              <RadioGroup
+                value={selectedPaymentMethod}
+                onValueChange={setSelectedPaymentMethod}
+                className="grid grid-cols-2 gap-2"
+              >
+                <div className="flex items-center space-x-2 border rounded-md p-3">
+                  <RadioGroupItem value="cash" id="payment-cash" />
+                  <Label htmlFor="payment-cash" className="cursor-pointer">
+                    Cash
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 border rounded-md p-3">
+                  <RadioGroupItem value="card" id="payment-card" />
+                  <Label htmlFor="payment-card" className="cursor-pointer">
+                    Card
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 border rounded-md p-3">
+                  <RadioGroupItem value="mobile" id="payment-mobile" />
+                  <Label htmlFor="payment-mobile" className="cursor-pointer">
+                    Mobile Payment
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2 border rounded-md p-3">
+                  <RadioGroupItem value="other" id="payment-other" />
+                  <Label htmlFor="payment-other" className="cursor-pointer">
+                    Other
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsPaymentDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handlePaymentComplete}
+              disabled={!selectedPaymentMethod}
+            >
+              Complete Payment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dine-in Dialog */}
+      <Dialog open={isDineInDialogOpen} onOpenChange={setIsDineInDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Order Type</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 my-4">
+            <div className="space-y-2">
+              <Label>Is this a dine-in order?</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant={dineInTableNumber ? "default" : "outline"}
+                  onClick={() => {
+                    if (availableTables.length === 0) {
+                      setNoTablesAvailableError(true);
+                    } else {
+                      setNoTablesAvailableError(false);
+                      setDineInTableNumber(availableTables[0]?.name || "");
+                    }
+                  }}
+                  className="w-full"
+                >
+                  Dine-in
+                </Button>
+                <Button
+                  variant={!dineInTableNumber ? "default" : "outline"}
+                  onClick={() => {
+                    setDineInTableNumber("");
+                    setDineInCustomerName("");
+                    setNoTablesAvailableError(false);
+                  }}
+                  className="w-full"
+                >
+                  Walk-in
+                </Button>
+              </div>
+            </div>
+
+            {noTablesAvailableError && (
+              <div className="text-red-500 text-sm flex items-center">
+                <AlertCircle className="h-4 w-4 mr-1" />
+                No tables available. Please add tables in Table Management.
+              </div>
+            )}
+
+            {dineInTableNumber && (
+              <div className="space-y-2">
+                <Label>Select Table</Label>
+                <Select
+                  value={dineInTableNumber}
+                  onValueChange={setDineInTableNumber}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a table" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableTables.map((table) => (
+                      <SelectItem key={table.id} value={table.name}>
+                        Table {table.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {dineInTableNumber && (
+              <div className="space-y-2">
+                <Label>Customer Name (Optional)</Label>
+                <Input
+                  value={dineInCustomerName}
+                  onChange={(e) => setDineInCustomerName(e.target.value)}
+                  placeholder="Enter customer name"
+                />
+              </div>
+            )}
+
+            {dineInTableNumber && (
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hold-billing"
+                  checked={holdBilling}
+                  onCheckedChange={(checked) => setHoldBilling(!!checked)}
+                />
+                <Label
+                  htmlFor="hold-billing"
+                  className="text-sm cursor-pointer"
+                >
+                  Hold billing until customer is ready to pay
+                </Label>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsDineInDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setIsDineInDialogOpen(false);
+                setSelectedPaymentMethod("");
+                setIsPaymentDialogOpen(true);
+              }}
+              disabled={dineInTableNumber && noTablesAvailableError}
+            >
+              Continue to Payment
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Receipt Printing Dialog */}
+      <Dialog open={isPrintingReceipt} onOpenChange={setIsPrintingReceipt}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Printing Receipt</DialogTitle>
+          </DialogHeader>
+
+          <div className="py-8 text-center">
+            <Printer className="h-16 w-16 mx-auto text-gray-400 animate-pulse mb-4" />
+            <p>Printing receipt...</p>
+            <p className="text-sm text-gray-500 mt-2">
+              This may take a few seconds
+            </p>
+          </div>
+
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button
+                variant="outline"
+                onClick={() => setIsPrintingReceipt(false)}
+              >
+                Close
+              </Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
