@@ -309,7 +309,7 @@ const MenuManagement = ({ initialItems = [] }: MenuManagementProps) => {
                   editingItem
                     ? {
                         name: editingItem.name,
-                        beverageId: editingItem.beverageId,
+                        beverageId: "", // Default empty string as it doesn't exist on MenuItem
                         price: editingItem.price.toString(),
                         description: editingItem.description || "",
                         type: editingItem.type,
@@ -340,12 +340,8 @@ const MenuManagement = ({ initialItems = [] }: MenuManagementProps) => {
                                       ).toString(),
                                     )
                                   : options?.map(() => "0"),
-                                required:
-                                  editingItem.customizationRequired?.[key] ||
-                                  false,
-                                multiSelect:
-                                  editingItem.customizationMultiSelect?.[key] ||
-                                  false,
+                                required: false, // Default to false as it doesn't exist on MenuItem
+                                multiSelect: false, // Default to false as it doesn't exist on MenuItem
                               };
                             })
                           : [],

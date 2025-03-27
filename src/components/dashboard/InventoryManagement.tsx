@@ -416,8 +416,7 @@ const InventoryManagement = ({
                               </div>
                               <Progress
                                 value={stockPercentage}
-                                className="h-2"
-                                indicatorClassName={progressColor}
+                                className={`h-2 ${progressColor}`}
                               />
                               <div className="text-xs text-muted-foreground">
                                 Min: {item.minStock} {item.unit}

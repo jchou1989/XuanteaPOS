@@ -130,7 +130,7 @@ const KitchenDisplay = ({ initialOrders = [] }: KitchenDisplayProps) => {
       // Only proceed if there are food items
       if (foodItems.length > 0) {
         // Format the order for kitchen display
-        const kitchenOrder = {
+        const kitchenOrder: Order = {
           id: newOrder.id || `kitchen-${Date.now()}`,
           orderNumber: newOrder.orderNumber,
           source: newOrder.source || "pos",

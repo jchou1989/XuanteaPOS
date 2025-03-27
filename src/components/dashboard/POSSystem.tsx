@@ -138,7 +138,7 @@ const POSSystem = ({ menuItems = [] }: POSSystemProps) => {
   }, [menuContext]);
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [customizationSelections, setCustomizationSelections] = useState<{
-    [key: string]: string;
+    [key: string]: string | string[];
   }>({});
   const [isCustomizationDialogOpen, setIsCustomizationDialogOpen] =
     useState(false);
@@ -1720,10 +1720,10 @@ const POSSystem = ({ menuItems = [] }: POSSystemProps) => {
                                       currentSelections.splice(index, 1);
                                     }
                                   }
-                                  setCustomizationSelections({
-                                    ...customizationSelections,
+                                  setCustomizationSelections((prev) => ({
+                                    ...prev,
                                     [key]: currentSelections,
-                                  });
+                                  }));
                                 }}
                               />
                               <Label

@@ -661,10 +661,10 @@ const CDSInterface = ({
       try {
         window.dispatchEvent(
           new CustomEvent("new-analytics-transaction", {
-            detail: transaction,
+            detail: order,
           }),
         );
-        console.log("Transaction dispatched to analytics:", transaction);
+        console.log("Transaction dispatched to analytics:", order);
       } catch (analyticsError) {
         console.error(
           "Error dispatching transaction to analytics:",

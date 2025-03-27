@@ -379,7 +379,21 @@ const Home = () => {
         {activePage === "inventory" && <InventoryManagement />}
         {activePage === "devices" && <ConnectedDevices />}
         {activePage === "kitchen-display" && <KitchenDisplay />}
-        {activePage === "ipad-pos" && <iPadPOS />}
+        {activePage === "ipad-pos" && (
+          <div className="container mx-auto py-6">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold">iPad POS Integration</h2>
+              <p className="text-muted-foreground">
+                Manage connected iPads and synchronize orders across devices
+              </p>
+            </div>
+            <div className="flex items-center justify-center h-64 border rounded-md">
+              <p className="text-muted-foreground">
+                iPad POS integration is currently under development.
+              </p>
+            </div>
+          </div>
+        )}
         {activePage === "wifi-settings" && <WiFiSettings />}
         {activePage === "bluetooth-settings" && <BluetoothSettings />}
       </div>

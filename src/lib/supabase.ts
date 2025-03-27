@@ -34,12 +34,12 @@ export const supabase = createClient<Database>(url, key, {
     detectSessionInUrl: true,
   },
   global: {
-    fetch: (...args) => {
+    fetch: (url, options) => {
       // Add retry logic for fetch operations
-      return fetch(...args).catch((error) => {
+      return fetch(url, options).catch((error) => {
         console.warn("Supabase fetch error, retrying:", error);
         return new Promise((resolve) => setTimeout(resolve, 1000)).then(() =>
-          fetch(...args),
+          fetch(url, options),
         );
       });
     },

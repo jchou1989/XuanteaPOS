@@ -68,7 +68,7 @@ setInterval(() => {
 }, 60 * 1000); // Every minute
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
-  <React.StrictMode className="max-w-fit max-h-fit">
+  <React.StrictMode>
     <BrowserRouter basename={basename}>
       <MenuProvider>
         <App />

@@ -157,45 +157,11 @@ const MenuItemForm = ({
       data.beverageId = generateBeverageId(data.name + customOptionsStr);
     }
 
-    // Convert customizationOptions to the format expected by the MenuItem interface
-    const formattedData = {
-      ...data,
-      image: imagePreview,
-      customizationOptions: data.customizationOptions
-        ? {
-            ...data.customizationOptions.reduce((acc, option) => {
-              const key = option.name.toLowerCase().replace(/\s+/g, "");
-              return { ...acc, [key]: option.options };
-            }, {}),
-          }
-        : undefined,
-      customizationPrices: data.customizationOptions
-        ? data.customizationOptions.reduce((acc, option) => {
-            const key = option.name.toLowerCase().replace(/\s+/g, "");
-            const prices = option.prices || [];
-            const priceMap = option.options.reduce((priceAcc, opt, index) => {
-              return {
-                ...priceAcc,
-                [opt]: prices[index] ? parseFloat(prices[index]) : 0,
-              };
-            }, {});
-            return { ...acc, [key]: priceMap };
-          }, {})
-        : undefined,
-      customizationRequired: data.customizationOptions
-        ? data.customizationOptions.reduce((acc, option) => {
-            const key = option.name.toLowerCase().replace(/\s+/g, "");
-            return { ...acc, [key]: option.required || false };
-          }, {})
-        : undefined,
-      customizationMultiSelect: data.customizationOptions
-        ? data.customizationOptions.reduce((acc, option) => {
-            const key = option.name.toLowerCase().replace(/\s+/g, "");
-            return { ...acc, [key]: option.multiSelect || false };
-          }, {})
-        : undefined,
-    };
-    onSubmit(formattedData);
+    // Set the image from the preview
+    data.image = imagePreview;
+
+    // Submit the form data directly
+    onSubmit(data);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -241,10 +207,6 @@ const MenuItemForm = ({
     updatedOptions[optionIndex].options.push("");
     if (updatedOptions[optionIndex].prices) {
       updatedOptions[optionIndex].prices?.push("0");
-    } else {
-      updatedOptions[optionIndex].prices = updatedOptions[
-        optionIndex
-      ].options.map(() => "0");
     }
     form.setValue("customizationOptions", updatedOptions);
   };
@@ -255,53 +217,23 @@ const MenuItemForm = ({
     updatedOptions[optionIndex].options = updatedOptions[
       optionIndex
     ].options.filter((_, i) => i !== valueIndex);
-
     if (updatedOptions[optionIndex].prices) {
       updatedOptions[optionIndex].prices = updatedOptions[
         optionIndex
       ].prices?.filter((_, i) => i !== valueIndex);
     }
-
     form.setValue("customizationOptions", updatedOptions);
   };
 
   return (
-    <Card className="w-full max-w-3xl mx-auto bg-white shadow-md overflow-auto max-h-[80vh]">
-      <CardHeader className="sticky top-0 bg-white z-10 border-b">
-        <CardTitle className="text-2xl font-bold text-gray-800">
-          {initialData.name ? "Edit Menu Item" : "Add New Menu Item"}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="overflow-y-auto pb-24">
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(handleSubmit)}
-            className="space-y-6"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {itemType === "beverage" && (
-                <FormField
-                  control={form.control}
-                  name="beverageId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Beverage ID</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="Auto-generated on save"
-                          {...field}
-                          disabled={true}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        A unique ID will be generated when you save
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Menu Item Details</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="name"
@@ -323,7 +255,7 @@ const MenuItemForm = ({
                   <FormItem>
                     <FormLabel>Price (QAR)</FormLabel>
                     <FormControl>
-                      <Input placeholder="0.00" {...field} />
+                      <Input type="text" placeholder="0.00" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -338,18 +270,14 @@ const MenuItemForm = ({
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Enter item description"
-                      className="resize-none"
-                      {...field}
-                    />
+                    <Textarea placeholder="Enter item description" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="type"
@@ -357,9 +285,9 @@ const MenuItemForm = ({
                   <FormItem>
                     <FormLabel>Item Type</FormLabel>
                     <Select
-                      onValueChange={(value: "beverage" | "food") => {
+                      onValueChange={(value) => {
                         field.onChange(value);
-                        setItemType(value);
+                        setItemType(value as "beverage" | "food");
                       }}
                       defaultValue={field.value}
                     >
@@ -384,299 +312,316 @@ const MenuItemForm = ({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
-                    <FormControl>
-                      {categories.length > 0 ? (
-                        <Select
-                          value={field.value}
-                          onValueChange={field.onChange}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a category" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {categories.map((category) => (
-                              <SelectItem
-                                key={category.id}
-                                value={category.name}
-                              >
-                                {category.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        <Input placeholder="Enter category name" {...field} />
-                      )}
-                    </FormControl>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {categories.map((category) => (
+                          <SelectItem key={category.id} value={category.name}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-
-              <FormField
-                control={form.control}
-                name="available"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Available</FormLabel>
-                      <FormDescription>
-                        Toggle if this item is currently available
-                      </FormDescription>
-                    </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
             </div>
 
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Item Image</h3>
-              <div className="flex items-center space-x-4 mb-4">
-                <Button
-                  type="button"
-                  variant={imageSource === "upload" ? "default" : "outline"}
-                  onClick={() => setImageSource("upload")}
-                  className="flex items-center gap-2"
-                >
-                  <Upload className="h-4 w-4" />
-                  Upload Image
-                </Button>
-                <Button
-                  type="button"
-                  variant={imageSource === "url" ? "default" : "outline"}
-                  onClick={() => setImageSource("url")}
-                  className="flex items-center gap-2"
-                >
-                  <Link className="h-4 w-4" />
-                  Image URL
-                </Button>
-              </div>
-
-              {imageSource === "upload" ? (
-                <div className="space-y-4">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    accept="image/*"
-                    className="hidden"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-full h-32 flex flex-col items-center justify-center border-dashed border-2 gap-2"
-                  >
-                    {imagePreview ? (
-                      <div className="relative w-full h-full">
-                        <img
-                          src={imagePreview}
-                          alt="Preview"
-                          className="object-contain w-full h-full"
-                        />
-                      </div>
-                    ) : (
-                      <>
-                        <Upload className="h-8 w-8 text-gray-400" />
-                        <span>Click to upload image</span>
-                        <span className="text-xs text-gray-500">
-                          JPG, PNG, GIF, SVG, WEBP
-                        </span>
-                      </>
-                    )}
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <Input
-                      placeholder="Enter image URL"
-                      value={imagePreview}
-                      onChange={(e) => handleUrlChange(e.target.value)}
-                    />
+            <FormField
+              control={form.control}
+              name="available"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="space-y-0.5">
+                    <FormLabel>Available</FormLabel>
+                    <FormDescription>
+                      Mark this item as available for ordering
+                    </FormDescription>
                   </div>
-                  {imagePreview && (
-                    <div className="w-full h-32 border rounded-md overflow-hidden">
-                      <img
-                        src={imagePreview}
-                        alt="Preview"
-                        className="object-contain w-full h-full"
-                        onError={() => setImagePreview("")}
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <Separator />
+
+            <div>
+              <h3 className="text-lg font-medium mb-2">Item Image</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id="upload-image"
+                      name="image-source"
+                      checked={imageSource === "upload"}
+                      onChange={() => setImageSource("upload")}
+                      className="h-4 w-4"
+                    />
+                    <label htmlFor="upload-image" className="cursor-pointer">
+                      Upload Image
+                    </label>
+                  </div>
+                  {imageSource === "upload" && (
+                    <div className="flex flex-col space-y-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="flex items-center gap-2"
+                      >
+                        <Upload className="h-4 w-4" />
+                        Choose File
+                      </Button>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        accept="image/*"
+                        className="hidden"
                       />
                     </div>
                   )}
+
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="radio"
+                      id="url-image"
+                      name="image-source"
+                      checked={imageSource === "url"}
+                      onChange={() => setImageSource("url")}
+                      className="h-4 w-4"
+                    />
+                    <label htmlFor="url-image" className="cursor-pointer">
+                      Image URL
+                    </label>
+                  </div>
+                  {imageSource === "url" && (
+                    <div className="flex flex-col space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Link className="h-4 w-4" />
+                        <Input
+                          type="text"
+                          placeholder="https://example.com/image.jpg"
+                          value={imagePreview}
+                          onChange={(e) => handleUrlChange(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
+
+                <div className="border rounded-md p-2 flex items-center justify-center">
+                  {imagePreview ? (
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="max-h-40 max-w-full object-contain"
+                    />
+                  ) : (
+                    <div className="text-center text-muted-foreground">
+                      <ImageIcon className="h-10 w-10 mx-auto mb-2 text-muted-foreground/50" />
+                      <p>Image preview</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
 
-            <Separator className="my-4" />
+            <Separator />
 
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-medium">Customization Options</h3>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={addCustomizationOption}
-                >
-                  <PlusCircle className="h-4 w-4 mr-2" />
-                  Add Group
-                </Button>
-              </div>
-
-              {form
-                .watch("customizationOptions")
-                ?.map((option, optionIndex) => (
-                  <div
-                    key={optionIndex}
-                    className="space-y-4 p-4 border rounded-md"
+            {itemType === "beverage" && (
+              <div>
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-lg font-medium">Customization Options</h3>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addCustomizationOption}
+                    className="flex items-center gap-1"
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4 flex-1">
+                    <PlusCircle className="h-4 w-4" />
+                    Add Option
+                  </Button>
+                </div>
+
+                {form
+                  .watch("customizationOptions")
+                  ?.map((option, optionIndex) => (
+                    <div
+                      key={optionIndex}
+                      className="border rounded-md p-4 mb-4 space-y-4"
+                    >
+                      <div className="flex justify-between items-start">
                         <Input
-                          placeholder="Option name (e.g. Size, Toppings)"
+                          placeholder="Option name (e.g. Size, Sugar Level)"
                           value={option.name}
                           onChange={(e) => {
-                            const currentOptions = [
-                              ...(form.getValues("customizationOptions") || []),
-                            ];
-                            currentOptions[optionIndex].name = e.target.value;
+                            const currentOptions =
+                              form.getValues("customizationOptions") || [];
+                            const updatedOptions = [...currentOptions];
+                            updatedOptions[optionIndex].name = e.target.value;
                             form.setValue(
                               "customizationOptions",
-                              currentOptions,
+                              updatedOptions,
                             );
                           }}
-                          className="max-w-xs"
+                          className="flex-1 mr-2"
                         />
-                        <div className="flex items-center gap-4">
-                          <div className="flex items-center gap-2">
-                            <Switch
-                              checked={option.required || false}
-                              onCheckedChange={(checked) => {
-                                const currentOptions = [
-                                  ...(form.getValues("customizationOptions") ||
-                                    []),
-                                ];
-                                currentOptions[optionIndex].required = checked;
-                                form.setValue(
-                                  "customizationOptions",
-                                  currentOptions,
-                                );
-                              }}
-                            />
-                            <span className="text-sm">Required</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Switch
-                              checked={option.multiSelect || false}
-                              onCheckedChange={(checked) => {
-                                const currentOptions = [
-                                  ...(form.getValues("customizationOptions") ||
-                                    []),
-                                ];
-                                currentOptions[optionIndex].multiSelect =
-                                  checked;
-                                form.setValue(
-                                  "customizationOptions",
-                                  currentOptions,
-                                );
-                              }}
-                            />
-                            <span className="text-sm">Multi-select</span>
-                          </div>
-                        </div>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeCustomizationOption(optionIndex)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-
-                    <div className="space-y-2">
-                      {option.options.map((value, valueIndex) => (
-                        <div
-                          key={valueIndex}
-                          className="flex items-center gap-2"
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => removeCustomizationOption(optionIndex)}
                         >
-                          <Input
-                            placeholder="Option value"
-                            value={value}
-                            onChange={(e) => {
-                              const currentOptions = [
-                                ...(form.getValues("customizationOptions") ||
-                                  []),
-                              ];
-                              currentOptions[optionIndex].options[valueIndex] =
-                                e.target.value;
-                              form.setValue(
-                                "customizationOptions",
-                                currentOptions,
-                              );
-                            }}
-                            className="flex-1"
-                          />
-                          <Input
-                            placeholder="Price"
-                            value={option.prices?.[valueIndex] || "0"}
-                            onChange={(e) => {
-                              const currentOptions = [
-                                ...(form.getValues("customizationOptions") ||
-                                  []),
-                              ];
-                              if (!currentOptions[optionIndex].prices) {
-                                currentOptions[optionIndex].prices =
-                                  currentOptions[optionIndex].options.map(
-                                    () => "0",
-                                  );
-                              }
-                              currentOptions[optionIndex].prices![valueIndex] =
-                                e.target.value;
-                              form.setValue(
-                                "customizationOptions",
-                                currentOptions,
-                              );
-                            }}
-                            className="w-20"
-                            type="number"
-                            min="0"
-                            step="0.5"
-                          />
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={`required-${optionIndex}`}
+                          checked={option.required}
+                          onChange={(e) => {
+                            const currentOptions =
+                              form.getValues("customizationOptions") || [];
+                            const updatedOptions = [...currentOptions];
+                            updatedOptions[optionIndex].required =
+                              e.target.checked;
+                            form.setValue(
+                              "customizationOptions",
+                              updatedOptions,
+                            );
+                          }}
+                          className="h-4 w-4"
+                        />
+                        <label
+                          htmlFor={`required-${optionIndex}`}
+                          className="text-sm"
+                        >
+                          Required
+                        </label>
+
+                        <input
+                          type="checkbox"
+                          id={`multi-${optionIndex}`}
+                          checked={option.multiSelect}
+                          onChange={(e) => {
+                            const currentOptions =
+                              form.getValues("customizationOptions") || [];
+                            const updatedOptions = [...currentOptions];
+                            updatedOptions[optionIndex].multiSelect =
+                              e.target.checked;
+                            form.setValue(
+                              "customizationOptions",
+                              updatedOptions,
+                            );
+                          }}
+                          className="h-4 w-4 ml-4"
+                        />
+                        <label
+                          htmlFor={`multi-${optionIndex}`}
+                          className="text-sm"
+                        >
+                          Allow multiple selections
+                        </label>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <h4 className="text-sm font-medium">Option Values</h4>
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
-                            onClick={() =>
-                              removeOptionValue(optionIndex, valueIndex)
-                            }
+                            onClick={() => addOptionValue(optionIndex)}
+                            className="h-8 text-xs flex items-center gap-1"
                           >
-                            <Trash2 className="h-4 w-4 text-red-500" />
+                            <PlusCircle className="h-3 w-3" />
+                            Add Value
                           </Button>
                         </div>
-                      ))}
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => addOptionValue(optionIndex)}
-                      >
-                        <PlusCircle className="h-4 w-4 mr-2" />
-                        Add
-                      </Button>
+
+                        {option.options.map((value, valueIndex) => (
+                          <div
+                            key={valueIndex}
+                            className="flex items-center gap-2"
+                          >
+                            <Input
+                              placeholder="Option value (e.g. Small, Medium, Large)"
+                              value={value}
+                              onChange={(e) => {
+                                const currentOptions =
+                                  form.getValues("customizationOptions") || [];
+                                const updatedOptions = [...currentOptions];
+                                updatedOptions[optionIndex].options[
+                                  valueIndex
+                                ] = e.target.value;
+                                form.setValue(
+                                  "customizationOptions",
+                                  updatedOptions,
+                                );
+                              }}
+                              className="flex-1"
+                            />
+                            <Input
+                              type="number"
+                              placeholder="+0.00"
+                              value={option.prices?.[valueIndex] || "0"}
+                              onChange={(e) => {
+                                const currentOptions =
+                                  form.getValues("customizationOptions") || [];
+                                const updatedOptions = [...currentOptions];
+                                if (!updatedOptions[optionIndex].prices) {
+                                  updatedOptions[optionIndex].prices =
+                                    option.options.map(() => "0");
+                                }
+                                if (updatedOptions[optionIndex].prices) {
+                                  updatedOptions[optionIndex].prices[
+                                    valueIndex
+                                  ] = e.target.value;
+                                }
+                                form.setValue(
+                                  "customizationOptions",
+                                  updatedOptions,
+                                );
+                              }}
+                              className="w-20"
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() =>
+                                removeOptionValue(optionIndex, valueIndex)
+                              }
+                              className="h-8 w-8"
+                              disabled={option.options.length <= 1}
+                            >
+                              <Trash2 className="h-3 w-3 text-red-500" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
-            </div>
+                  ))}
+              </div>
+            )}
 
             {itemType === "food" && (
               <FormField
@@ -688,7 +633,6 @@ const MenuItemForm = ({
                     <FormControl>
                       <Textarea
                         placeholder="Enter preparation instructions for kitchen staff"
-                        className="resize-none min-h-[100px]"
                         {...field}
                       />
                     </FormControl>
@@ -697,19 +641,18 @@ const MenuItemForm = ({
                 )}
               />
             )}
-
-            <CardFooter className="flex justify-end gap-2 px-0 sticky bottom-0 bg-white border-t pt-4 mt-6">
-              <Button type="button" variant="outline" onClick={onCancel}>
-                Cancel
-              </Button>
-              <Button type="submit">
-                {initialData.name ? "Update Item" : "Add Item"}
-              </Button>
-            </CardFooter>
-          </form>
-        </Form>
-      </CardContent>
-    </Card>
+          </CardContent>
+          <CardFooter className="flex justify-between">
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+            <Button type="submit">
+              {initialData.name ? "Update Item" : "Add Item"}
+            </Button>
+          </CardFooter>
+        </Card>
+      </form>
+    </Form>
   );
 };
 
