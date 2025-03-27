@@ -71,6 +71,8 @@ const MenuManagement = ({ initialItems = [] }: MenuManagementProps) => {
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(
     null,
   );
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
   // Listen for Excel import categories
   useEffect(() => {
@@ -135,7 +137,11 @@ const MenuManagement = ({ initialItems = [] }: MenuManagementProps) => {
     deleteMenuItem(id);
   };
 
-  const handleSaveItem = (formData: any) => {
+  const handleSaveItem = async (formData: any) => {
+    // Show saving state
+    setIsSaving(true);
+    setSaveSuccess(false);
+
     // Process the form data
     const processedData = {
       ...formData,
@@ -199,39 +205,58 @@ const MenuManagement = ({ initialItems = [] }: MenuManagementProps) => {
 
     console.log("Processed form data:", processedData);
 
-    if (editingItem) {
-      // Update existing item
-      const updatedItem = {
-        ...processedData,
-        id: editingItem.id, // Ensure ID is preserved
-      };
-      console.log("Updating menu item:", updatedItem);
-      updateMenuItem(updatedItem);
+    try {
+      if (editingItem) {
+        // Update existing item
+        const updatedItem = {
+          ...processedData,
+          id: editingItem.id, // Ensure ID is preserved
+        };
+        console.log("Updating menu item:", updatedItem);
+        updateMenuItem(updatedItem);
 
-      // Force a refresh of the menu items list
-      setActiveTab("list");
-      setEditingItem(null);
-    } else {
-      // Add new item
-      const newItem = {
-        ...processedData,
-        id: `${Date.now()}`, // Generate a temporary ID
-      };
-      console.log("Adding new menu item:", newItem);
-      addMenuItem(newItem);
+        // Show success state
+        setSaveSuccess(true);
 
-      // Force a refresh of the menu items list
-      setActiveTab("list");
-      setEditingItem(null);
-    }
+        // Wait a moment to show success state before redirecting
+        setTimeout(() => {
+          // Force a refresh of the menu items list
+          setActiveTab("list");
+          setEditingItem(null);
+          setIsSaving(false);
+          setSaveSuccess(false);
+        }, 1000);
+      } else {
+        // Add new item
+        const newItem = {
+          ...processedData,
+          id: `${Date.now()}`, // Generate a temporary ID
+        };
+        console.log("Adding new menu item:", newItem);
+        addMenuItem(newItem);
 
-    // Explicitly broadcast menu items to all components after save
-    console.log("MenuManagement: Broadcasting updated menu items after save");
-    setTimeout(() => {
+        // Show success state
+        setSaveSuccess(true);
+
+        // Wait a moment to show success state before redirecting
+        setTimeout(() => {
+          // Force a refresh of the menu items list
+          setActiveTab("list");
+          setEditingItem(null);
+          setIsSaving(false);
+          setSaveSuccess(false);
+        }, 1000);
+      }
+
+      // Explicitly broadcast menu items to all components after save
+      console.log("MenuManagement: Broadcasting updated menu items after save");
       window.dispatchEvent(
         new CustomEvent("menu-items-updated", { detail: menuItems }),
       );
-    }, 100);
+    } catch (error) {
+      console.error("Error saving menu item:", error);
+      setIsSaving(false);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -364,63 +389,97 @@ const MenuManagement = ({ initialItems = [] }: MenuManagementProps) => {
             </TabsContent>
 
             <TabsContent value="add" className="mt-0">
-              <MenuItemForm
-                initialData={
-                  editingItem
-                    ? {
-                        name: editingItem.name,
-                        beverageId: "", // Default empty string as it doesn't exist on MenuItem
-                        price: editingItem.price.toString(),
-                        description: editingItem.description || "",
-                        type: editingItem.type,
-                        category: editingItem.category || "",
-                        available: true,
-                        image: editingItem.image || "",
-                        imageSource: editingItem.image
-                          ? editingItem.image.startsWith("data:")
-                            ? "upload"
-                            : "url"
-                          : "upload",
-                        customizationOptions: editingItem.customizationOptions
-                          ? Object.entries(
-                              editingItem.customizationOptions,
-                            ).map(([key, options]) => {
-                              const formattedKey = key
-                                .replace(/([A-Z])/g, " $1")
-                                .replace(/^./, (str) => str.toUpperCase());
-                              return {
-                                name: formattedKey,
-                                options: options || [],
-                                prices: editingItem.customizationPrices?.[key]
-                                  ? Array.isArray(options)
-                                    ? options.map((option) =>
-                                        (
-                                          editingItem.customizationPrices?.[
-                                            key
-                                          ]?.[option] || 0
-                                        ).toString(),
-                                      )
-                                    : []
-                                  : Array.isArray(options)
-                                    ? options.map(() => "0")
-                                    : [],
-                                required:
-                                  editingItem.customizationRequired?.[key] ||
-                                  false,
-                                multiSelect:
-                                  editingItem.customizationMultiSelect?.[key] ||
-                                  false,
-                              };
-                            })
-                          : [],
-                        preparationNotes: editingItem.preparationNotes || "",
-                      }
-                    : undefined
-                }
-                onSubmit={handleSaveItem}
-                onCancel={handleCancelEdit}
-                categories={categories}
-              />
+              <div className="relative">
+                {(isSaving || saveSuccess) && (
+                  <div className="absolute inset-0 bg-black/10 flex items-center justify-center z-10 rounded-lg">
+                    <div className="bg-white p-4 rounded-lg shadow-lg flex flex-col items-center">
+                      {isSaving && !saveSuccess && (
+                        <>
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+                          <p>Saving changes...</p>
+                        </>
+                      )}
+                      {saveSuccess && (
+                        <>
+                          <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center mb-2">
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              className="h-5 w-5 text-green-600"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                            >
+                              <path
+                                fillRule="evenodd"
+                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                clipRule="evenodd"
+                              />
+                            </svg>
+                          </div>
+                          <p>Item saved successfully!</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+                <MenuItemForm
+                  initialData={
+                    editingItem
+                      ? {
+                          name: editingItem.name,
+                          beverageId: "", // Default empty string as it doesn't exist on MenuItem
+                          price: editingItem.price.toString(),
+                          description: editingItem.description || "",
+                          type: editingItem.type,
+                          category: editingItem.category || "",
+                          available: true,
+                          image: editingItem.image || "",
+                          imageSource: editingItem.image
+                            ? editingItem.image.startsWith("data:")
+                              ? "upload"
+                              : "url"
+                            : "upload",
+                          customizationOptions: editingItem.customizationOptions
+                            ? Object.entries(
+                                editingItem.customizationOptions,
+                              ).map(([key, options]) => {
+                                const formattedKey = key
+                                  .replace(/([A-Z])/g, " $1")
+                                  .replace(/^./, (str) => str.toUpperCase());
+                                return {
+                                  name: formattedKey,
+                                  options: options || [],
+                                  prices: editingItem.customizationPrices?.[key]
+                                    ? Array.isArray(options)
+                                      ? options.map((option) =>
+                                          (
+                                            editingItem.customizationPrices?.[
+                                              key
+                                            ]?.[option] || 0
+                                          ).toString(),
+                                        )
+                                      : []
+                                    : Array.isArray(options)
+                                      ? options.map(() => "0")
+                                      : [],
+                                  required:
+                                    editingItem.customizationRequired?.[key] ||
+                                    false,
+                                  multiSelect:
+                                    editingItem.customizationMultiSelect?.[
+                                      key
+                                    ] || false,
+                                };
+                              })
+                            : [],
+                          preparationNotes: editingItem.preparationNotes || "",
+                        }
+                      : undefined
+                  }
+                  onSubmit={handleSaveItem}
+                  onCancel={handleCancelEdit}
+                  categories={categories}
+                />
+              </div>
             </TabsContent>
           </Tabs>
         </CardContent>

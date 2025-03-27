@@ -715,7 +715,7 @@ const MenuItemForm = ({
             <Button type="button" variant="outline" onClick={onCancel}>
               Cancel
             </Button>
-            <Button type="submit">
+            <Button type="submit" className="min-w-[120px]">
               {initialData.name ? "Update Item" : "Add Item"}
             </Button>
           </CardFooter>
