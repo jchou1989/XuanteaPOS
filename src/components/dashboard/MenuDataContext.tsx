@@ -79,26 +79,41 @@ export function MenuProvider({ children }: MenuProviderProps) {
       let data = null;
       let error = null;
 
+      // First, try to create the menu_items table if it doesn't exist
+      try {
+        console.log("Ensuring menu_items table exists...");
+        // Try to create the table directly instead of using RPC
+        await supabase.rpc("create_menu_items_if_not_exists").then(
+          () =>
+            console.log(
+              "Menu items table creation function called successfully",
+            ),
+          (err) =>
+            console.log(
+              "Menu items table may already exist or RPC not available:",
+              err,
+            ),
+        );
+      } catch (e) {
+        console.log("Error ensuring menu_items table exists:", e);
+        // Continue anyway, as the table might already exist
+      }
+
       while (attempts < 3) {
         try {
-          // Check if menu_items table exists first
-          const { data: tableExists } = await supabase
-            .from("information_schema.tables")
-            .select("table_name")
-            .eq("table_name", "menu_items")
-            .single();
+          console.log(`Supabase fetch attempt ${attempts + 1}...`);
+          // Query the menu_items table directly without checking if it exists
+          const result = await supabase.from("menu_items").select("*");
 
-          // If table exists, query it
-          let result;
-          if (tableExists) {
-            result = await supabase.from("menu_items").select("*");
-          } else {
-            // Table doesn't exist yet
-            result = { data: null, error: { message: "Table does not exist" } };
-          }
           data = result.data;
           error = result.error;
-          if (!error) break;
+
+          if (!error) {
+            console.log(
+              `Supabase fetch successful, got ${data?.length || 0} items`,
+            );
+            break;
+          }
 
           console.warn(`Supabase fetch attempt ${attempts + 1} failed:`, error);
           attempts++;
@@ -379,14 +394,24 @@ export function MenuProvider({ children }: MenuProviderProps) {
       // Also try to save to Supabase if available
       try {
         const saveToSupabase = async () => {
-          // Create a menu_items table if it doesn't exist yet
+          // Ensure menu_items table exists
           try {
-            // First try to create the table if it doesn't exist
-            await supabase.rpc("create_menu_items_if_not_exists");
-          } catch (e) {
-            console.log(
-              "Menu items table may already exist or RPC not available",
+            console.log("Ensuring menu_items table exists before saving...");
+            // Try to create the table directly instead of using RPC
+            await supabase.rpc("create_menu_items_if_not_exists").then(
+              () =>
+                console.log(
+                  "Menu items table creation function called successfully",
+                ),
+              (err) =>
+                console.log(
+                  "Menu items table may already exist or RPC not available:",
+                  err,
+                ),
             );
+          } catch (e) {
+            console.log("Error ensuring menu_items table exists:", e);
+            // Continue anyway, as we'll try the upsert which might create the table
           }
 
           // Format menu items to match expected structure

@@ -7,23 +7,21 @@ const supabaseUrl =
 const supabaseAnonKey =
   import.meta.env.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
-// Fallback values for preview mode or production if env vars are missing
-const fallbackUrl = "https://xxxxxxxxxxx.supabase.co";
-const fallbackKey = "eyJxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+// Log environment variables for debugging
+console.log("Supabase URL from env:", supabaseUrl);
+console.log("Supabase key available:", !!supabaseAnonKey);
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(
-    "Missing Supabase environment variables, using fallbacks for preview",
-  );
-}
+// Fallback values for preview mode or development if env vars are missing
+const fallbackUrl = "https://your-project-id.supabase.co";
+const fallbackKey = "your-anon-key";
 
-// Use fallbacks if actual values are missing (in any environment)
+// Use fallbacks if actual values are missing or undefined
 const url =
-  !supabaseUrl || supabaseUrl === "undefined" ? fallbackUrl : supabaseUrl;
+  supabaseUrl && supabaseUrl !== "undefined" ? supabaseUrl : fallbackUrl;
 const key =
-  !supabaseAnonKey || supabaseAnonKey === "undefined"
-    ? fallbackKey
-    : supabaseAnonKey;
+  supabaseAnonKey && supabaseAnonKey !== "undefined"
+    ? supabaseAnonKey
+    : fallbackKey;
 
 // Ensure we always have a URL and key
 if (!url) {
