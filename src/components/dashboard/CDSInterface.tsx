@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useMenuData } from "./MenuDataContext";
+import { createTransaction } from "@/lib/transactionService";
 import "./CDSInterface.css";
 
 interface MenuItem {
@@ -581,50 +582,28 @@ const CDSInterface = ({
         deviceName: deviceName,
       };
 
-      // Create transaction record for analytics
-      const transaction = {
-        id: `tx-${Date.now()}`,
-        orderNumber: newOrderNumber,
-        date: new Date(),
-        amount: calculateTotal(),
-        source: "cds",
-        status: isPayNowSelected ? "completed" : "pending",
-        paymentMethod: selectedPaymentMethod || "Pay Later",
-        items: cart.map((item) => ({
-          name: item.name,
-          quantity: item.quantity,
-          price: item.totalPrice / item.quantity,
-        })),
-        orderType: "walk-in",
-        customerName: customerName,
-      };
-
-      // Try to save to Supabase first, but continue even if it fails
+      // Try to save to Supabase using transactionService
       try {
-        const { data, error } = await supabase
-          .from("transactions")
-          .insert([
-            {
-              order_number: newOrderNumber,
-              customer_name: customerName,
-              total_amount: calculateTotal(),
-              payment_method: selectedPaymentMethod || "Pay Later",
-              order_items: cart,
-              device_id: deviceId,
-              device_name: deviceName,
-              user_id: userId || "system",
-              status: isPayNowSelected ? "completed" : "pending",
-              order_type: "walk-in",
-              created_at: new Date().toISOString(),
-            },
-          ])
-          .select();
+        // Use the transactionService instead of direct Supabase calls
+        const transactionResult = await createTransaction({
+          orderNumber: newOrderNumber,
+          amount: calculateTotal(),
+          source: "cds",
+          status: isPayNowSelected ? "completed" : "pending",
+          paymentMethod: selectedPaymentMethod || "Pay Later",
+          orderType: "walk-in",
+          items: cart.map((item) => ({
+            name: item.name,
+            quantity: item.quantity,
+            price: item.totalPrice / item.quantity,
+            type: item.type,
+            customizations: item.selectedOptions || undefined,
+          })),
+          userId: userId || undefined,
+          createdBy: customerName || "Guest",
+        });
 
-        if (error) {
-          console.error("Database error:", error);
-        } else {
-          console.log("Transaction saved to database:", data);
-        }
+        console.log("Transaction saved to database:", transactionResult);
       } catch (dbError) {
         console.error("Database error:", dbError);
         // Continue anyway for demo purposes
@@ -638,42 +617,6 @@ const CDSInterface = ({
           }),
         );
         console.log("Order dispatched to queue:", order);
-
-        // Also dispatch directly to kitchen display if there are food items
-        if (cart.some((item) => item.type === "food")) {
-          const kitchenOrder = {
-            id: order.id,
-            orderNumber: order.orderNumber,
-            source: "iPad",
-            items: cart
-              .filter((item) => item.type === "food")
-              .map((item) => ({
-                id: item.id,
-                name: item.name,
-                quantity: item.quantity,
-                type: "food",
-                customizations: item.selectedOptions
-                  ? Object.values(item.selectedOptions).filter(Boolean)
-                  : [],
-                status: "pending",
-                prepTime: 8, // Default prep time for food items
-              })),
-            status: "pending",
-            createdAt: new Date(),
-            isDelivery: false,
-            customerName: customerName,
-          };
-
-          window.dispatchEvent(
-            new CustomEvent("new-kitchen-order", {
-              detail: kitchenOrder,
-            }),
-          );
-          console.log(
-            "Dispatched food items directly to kitchen display:",
-            kitchenOrder,
-          );
-        }
 
         // Also dispatch directly to kitchen display if there are food items
         if (cart.some((item) => item.type === "food")) {

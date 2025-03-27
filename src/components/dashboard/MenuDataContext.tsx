@@ -81,7 +81,21 @@ export function MenuProvider({ children }: MenuProviderProps) {
 
       while (attempts < 3) {
         try {
-          const result = await supabase.from("menu_items").select("*");
+          // Check if menu_items table exists first
+          const { data: tableExists } = await supabase
+            .from("information_schema.tables")
+            .select("table_name")
+            .eq("table_name", "menu_items")
+            .single();
+
+          // If table exists, query it
+          let result;
+          if (tableExists) {
+            result = await supabase.from("menu_items").select("*");
+          } else {
+            // Table doesn't exist yet
+            result = { data: null, error: { message: "Table does not exist" } };
+          }
           data = result.data;
           error = result.error;
           if (!error) break;
@@ -103,7 +117,24 @@ export function MenuProvider({ children }: MenuProviderProps) {
 
       if (data && data.length > 0) {
         console.log("Loaded menu items from Supabase:", data.length);
-        setMenuItems(data as MenuItem[]);
+        // Transform the data to match our MenuItem interface
+        const transformedData = data.map((item) => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          description: item.description,
+          type: item.type as "beverage" | "food",
+          category: item.category || undefined,
+          customizationOptions: item.customization_options || undefined,
+          customizationPrices: item.customization_prices || undefined,
+          customizationRequired: item.customization_required || undefined,
+          customizationMultiSelect:
+            item.customization_multi_select || undefined,
+          preparationNotes: item.preparation_notes || undefined,
+          image: item.image || undefined,
+        }));
+
+        setMenuItems(transformedData);
         localStorage.setItem("menuItems", JSON.stringify(data));
 
         // Dispatch event to notify other components
@@ -271,7 +302,25 @@ export function MenuProvider({ children }: MenuProviderProps) {
 
         // Try to save sample data to Supabase for future use
         try {
-          await supabase.from("menu_items").insert(sampleMenuItems);
+          // Format sample menu items to match expected structure
+          const formattedSampleItems = sampleMenuItems.map((item) => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            description: item.description,
+            type: item.type,
+            category: item.category || null,
+            customization_options: item.customizationOptions || null,
+            customization_prices: item.customizationPrices || null,
+            customization_required: item.customizationRequired || null,
+            customization_multi_select: item.customizationMultiSelect || null,
+            preparation_notes: item.preparationNotes || null,
+            image: item.image || null,
+          }));
+
+          await supabase
+            .from("menu_items")
+            .upsert(formattedSampleItems, { onConflict: "id" });
         } catch (insertError) {
           console.error(
             "Error saving sample menu items to Supabase:",
@@ -330,10 +379,36 @@ export function MenuProvider({ children }: MenuProviderProps) {
       // Also try to save to Supabase if available
       try {
         const saveToSupabase = async () => {
-          // First delete all existing menu items
-          await supabase.from("menu_items").delete().neq("id", "0");
-          // Then insert the new ones
-          const { error } = await supabase.from("menu_items").insert(menuItems);
+          // Create a menu_items table if it doesn't exist yet
+          try {
+            // First try to create the table if it doesn't exist
+            await supabase.rpc("create_menu_items_if_not_exists");
+          } catch (e) {
+            console.log(
+              "Menu items table may already exist or RPC not available",
+            );
+          }
+
+          // Format menu items to match expected structure
+          const formattedMenuItems = menuItems.map((item) => ({
+            id: item.id,
+            name: item.name,
+            price: item.price,
+            description: item.description,
+            type: item.type,
+            category: item.category || null,
+            customization_options: item.customizationOptions || null,
+            customization_prices: item.customizationPrices || null,
+            customization_required: item.customizationRequired || null,
+            customization_multi_select: item.customizationMultiSelect || null,
+            preparation_notes: item.preparationNotes || null,
+            image: item.image || null,
+          }));
+
+          // Use upsert instead of delete and insert
+          const { error } = await supabase
+            .from("menu_items")
+            .upsert(formattedMenuItems, { onConflict: "id" });
           if (error) {
             console.error("Error saving menu items to Supabase:", error);
           } else {
