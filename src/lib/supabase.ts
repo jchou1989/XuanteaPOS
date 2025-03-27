@@ -11,11 +11,14 @@ const supabaseAnonKey =
 console.log("Supabase URL from env:", supabaseUrl);
 console.log("Supabase key available:", !!supabaseAnonKey);
 
-// Fallback values for preview mode or development if env vars are missing
-const fallbackUrl = "https://your-project-id.supabase.co";
-const fallbackKey = "your-anon-key";
+// No fallbacks in production - we need real values
+// These values are only used for local development when env vars might be missing
+const fallbackUrl = import.meta.env.DEV
+  ? "https://your-project-id.supabase.co"
+  : null;
+const fallbackKey = import.meta.env.DEV ? "your-anon-key" : null;
 
-// Use fallbacks if actual values are missing or undefined
+// Only use fallbacks in development mode
 const url =
   supabaseUrl && supabaseUrl !== "undefined" ? supabaseUrl : fallbackUrl;
 const key =

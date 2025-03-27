@@ -225,7 +225,7 @@ const Home = () => {
   }, [activePage]);
 
   return (
-    <div className="flex h-screen w-full bg-background">
+    <div className="flex h-screen w-full bg-background overflow-hidden">
       {/* Sidebar */}
       <Sidebar
         activePage={activePage}
@@ -236,7 +236,7 @@ const Home = () => {
       />
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-auto">
         {activePage === "orders" && <OrderQueuePanel />}
         {activePage === "pos" && <POSSystem menuItems={items} />}
         {activePage === "menu" && <MenuManagement />}
