@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import { Input } from "../ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Card, CardContent } from "../ui/card";
 import { Printer, Download, Check, X } from "lucide-react";
+import { useReactToPrint } from "react-to-print";
 
 interface QRCodeGeneratorProps {
   isOpen?: boolean;
@@ -64,12 +65,36 @@ const QRCodeGenerator = ({
   const [printStatus, setPrintStatus] = useState<"idle" | "success" | "error">(
     "idle",
   );
+  const printRef = useRef<HTMLDivElement>(null);
 
-  const handlePrint = () => {
-    // Simulate printing process
-    setPrintStatus("success");
-    setTimeout(() => setPrintStatus("idle"), 2000);
-  };
+  const handlePrint = useReactToPrint({
+    content: () => printRef.current,
+    onBeforeGetContent: () => {
+      setPrintStatus("idle");
+      return Promise.resolve();
+    },
+    onPrintError: () => {
+      setPrintStatus("error");
+      setTimeout(() => setPrintStatus("idle"), 2000);
+    },
+    onAfterPrint: () => {
+      setPrintStatus("success");
+      setTimeout(() => setPrintStatus("idle"), 2000);
+    },
+    removeAfterPrint: true,
+    pageStyle: `
+      @media print {
+        @page {
+          size: 58mm 40mm; /* Standard receipt printer size */
+          margin: 0;
+        }
+        body {
+          margin: 0;
+          padding: 0;
+        }
+      }
+    `,
+  });
 
   const handleDownload = () => {
     // Simulate download process
@@ -132,11 +157,25 @@ const QRCodeGenerator = ({
                     <CardContent className="p-0">
                       <div className="flex flex-col items-center">
                         <div className="bg-gray-50 p-4 rounded-lg mb-4 w-full flex justify-center">
-                          <img
-                            src={getQRCodeUrl(item)}
-                            alt={`QR Code for ${item.name}`}
-                            className="w-48 h-48"
-                          />
+                          <div ref={printRef} className="print-container">
+                            <img
+                              src={getQRCodeUrl(item)}
+                              alt={`QR Code for ${item.name}`}
+                              className="w-48 h-48"
+                            />
+                            <div className="print-only mt-2 text-center">
+                              <div className="font-bold">{item.name}</div>
+                              {item.customizations?.size && (
+                                <div>Size: {item.customizations.size}</div>
+                              )}
+                              {item.customizations?.sugar && (
+                                <div>Sugar: {item.customizations.sugar}</div>
+                              )}
+                              {item.customizations?.ice && (
+                                <div>Ice: {item.customizations.ice}</div>
+                              )}
+                            </div>
+                          </div>
                         </div>
 
                         <div className="w-full space-y-2 mb-4">

@@ -19,6 +19,7 @@ import {
   ShoppingCart,
   X,
   AlertCircle,
+  Search,
 } from "lucide-react";
 import {
   Dialog,
@@ -92,6 +93,10 @@ const POSSystem = ({ menuItems = [] }: POSSystemProps) => {
   }>({});
   // Add state to store menu items received from MenuManagement
   const [menuItemsFromContext, setMenuItems] = useState<MenuItem[]>([]);
+  // Add search functionality
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [filteredItems, setFilteredItems] = useState<MenuItem[]>([]);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
 
   // Request menu items if not available
   useEffect(() => {
@@ -234,6 +239,25 @@ const POSSystem = ({ menuItems = [] }: POSSystemProps) => {
       }
     }
   }, [effectiveMenuItems, activeCategory]);
+
+  // Handle search functionality
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setIsSearching(false);
+      setFilteredItems([]);
+      return;
+    }
+
+    setIsSearching(true);
+    const query = searchQuery.toLowerCase();
+    const results = effectiveMenuItems.filter(
+      (item) =>
+        item.name.toLowerCase().includes(query) ||
+        item.description?.toLowerCase().includes(query) ||
+        item.category?.toLowerCase().includes(query),
+    );
+    setFilteredItems(results);
+  }, [searchQuery, effectiveMenuItems]);
 
   const openCustomizationDialog = (item: MenuItem) => {
     setSelectedItem(item);
@@ -512,6 +536,8 @@ const POSSystem = ({ menuItems = [] }: POSSystemProps) => {
       if (!dineInTableNumber) {
         // Ask if this is dine-in
         setIsDineInDialogOpen(true);
+        // Request available tables again to ensure we have the latest data
+        window.dispatchEvent(new CustomEvent("request-available-tables"));
       } else {
         // Proceed to payment
         setSelectedPaymentMethod("");
@@ -839,7 +865,79 @@ const POSSystem = ({ menuItems = [] }: POSSystemProps) => {
           <p className="text-muted-foreground">Take customer orders</p>
         </div>
 
-        {categories.length > 0 ? (
+        {/* Search Bar */}
+        <div className="relative mb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search menu items..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="absolute right-1 top-1 h-8 w-8 p-0"
+                onClick={() => setSearchQuery("")}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {isSearching ? (
+          // Search Results
+          <div>
+            <h3 className="text-lg font-medium mb-4">Search Results</h3>
+            {filteredItems.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {filteredItems.map((item) => (
+                  <Card
+                    key={item.id}
+                    className="overflow-hidden cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => addToCartDirectly(item)}
+                  >
+                    <CardHeader className="p-4 pb-2">
+                      {item.image && (
+                        <div className="w-full h-24 mb-2 overflow-hidden rounded-md">
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      )}
+                      <CardTitle className="text-base">{item.name}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0 pb-4">
+                      <p className="text-lg font-semibold">
+                        QAR {item.price.toFixed(2)}
+                      </p>
+                      {item.description && (
+                        <p className="text-sm text-muted-foreground truncate">
+                          {item.description}
+                        </p>
+                      )}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {item.category || "Uncategorized"}
+                      </p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-64">
+                <p className="text-muted-foreground">
+                  No items found matching "{searchQuery}"
+                </p>
+              </div>
+            )}
+          </div>
+        ) : // Regular Category View
+        categories.length > 0 ? (
           <Tabs
             value={activeCategory}
             onValueChange={setActiveCategory}
@@ -1687,59 +1785,61 @@ const POSSystem = ({ menuItems = [] }: POSSystemProps) => {
                     </h4>
                     {selectedItem?.customizationMultiSelect?.[key] ? (
                       <div className="space-y-2">
-                        {options?.map((option) => {
-                          const optionPrice =
-                            selectedItem.customizationPrices?.[key]?.[option] ||
-                            0;
-                          const isSelected =
-                            Array.isArray(customizationSelections[key]) &&
-                            (customizationSelections[key] as string[]).includes(
-                              option,
-                            );
+                        {Array.isArray(options) &&
+                          options.map((option) => {
+                            const optionPrice =
+                              selectedItem.customizationPrices?.[key]?.[
+                                option
+                              ] || 0;
+                            const isSelected =
+                              Array.isArray(customizationSelections[key]) &&
+                              (
+                                customizationSelections[key] as string[]
+                              ).includes(option);
 
-                          return (
-                            <div
-                              key={option}
-                              className="flex items-center space-x-2 mb-1"
-                            >
-                              <Checkbox
-                                id={`${key}-${option}`}
-                                checked={isSelected}
-                                onCheckedChange={(checked) => {
-                                  const currentSelections = [
-                                    ...((customizationSelections[
-                                      key
-                                    ] as string[]) || []),
-                                  ];
-                                  if (checked) {
-                                    currentSelections.push(option);
-                                  } else {
-                                    const index =
-                                      currentSelections.indexOf(option);
-                                    if (index > -1) {
-                                      currentSelections.splice(index, 1);
-                                    }
-                                  }
-                                  setCustomizationSelections((prev) => ({
-                                    ...prev,
-                                    [key]: currentSelections,
-                                  }));
-                                }}
-                              />
-                              <Label
-                                htmlFor={`${key}-${option}`}
-                                className="flex-1"
+                            return (
+                              <div
+                                key={option}
+                                className="flex items-center space-x-2 mb-1"
                               >
-                                {option}
-                              </Label>
-                              {optionPrice > 0 && (
-                                <span className="text-sm">
-                                  +QAR {optionPrice.toFixed(2)}
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })}
+                                <Checkbox
+                                  id={`${key}-${option}`}
+                                  checked={isSelected}
+                                  onCheckedChange={(checked) => {
+                                    const currentSelections = [
+                                      ...((customizationSelections[
+                                        key
+                                      ] as string[]) || []),
+                                    ];
+                                    if (checked) {
+                                      currentSelections.push(option);
+                                    } else {
+                                      const index =
+                                        currentSelections.indexOf(option);
+                                      if (index > -1) {
+                                        currentSelections.splice(index, 1);
+                                      }
+                                    }
+                                    setCustomizationSelections((prev) => ({
+                                      ...prev,
+                                      [key]: currentSelections,
+                                    }));
+                                  }}
+                                />
+                                <Label
+                                  htmlFor={`${key}-${option}`}
+                                  className="flex-1"
+                                >
+                                  {option}
+                                </Label>
+                                {optionPrice > 0 && (
+                                  <span className="text-sm">
+                                    +QAR {optionPrice.toFixed(2)}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
                       </div>
                     ) : (
                       <RadioGroup
@@ -1759,33 +1859,35 @@ const POSSystem = ({ menuItems = [] }: POSSystemProps) => {
                             </Label>
                           </div>
                         )}
-                        {options?.map((option) => {
-                          const optionPrice =
-                            selectedItem.customizationPrices?.[key]?.[option] ||
-                            0;
-                          return (
-                            <div
-                              key={option}
-                              className="flex items-center space-x-2 mb-1"
-                            >
-                              <RadioGroupItem
-                                value={option}
-                                id={`${key}-${option}`}
-                              />
-                              <Label
-                                htmlFor={`${key}-${option}`}
-                                className="flex-1"
+                        {Array.isArray(options) &&
+                          options.map((option) => {
+                            const optionPrice =
+                              selectedItem.customizationPrices?.[key]?.[
+                                option
+                              ] || 0;
+                            return (
+                              <div
+                                key={option}
+                                className="flex items-center space-x-2 mb-1"
                               >
-                                {option}
-                              </Label>
-                              {optionPrice > 0 && (
-                                <span className="text-sm">
-                                  +QAR {optionPrice.toFixed(2)}
-                                </span>
-                              )}
-                            </div>
-                          );
-                        })}
+                                <RadioGroupItem
+                                  value={option}
+                                  id={`${key}-${option}`}
+                                />
+                                <Label
+                                  htmlFor={`${key}-${option}`}
+                                  className="flex-1"
+                                >
+                                  {option}
+                                </Label>
+                                {optionPrice > 0 && (
+                                  <span className="text-sm">
+                                    +QAR {optionPrice.toFixed(2)}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
                       </RadioGroup>
                     )}
                   </div>
