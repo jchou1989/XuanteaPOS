@@ -184,11 +184,17 @@ const MenuItemForm = ({
     form.setValue("customizationOptions", [
       ...currentOptions,
       {
-        name: "",
-        options: [""],
+        name: "", // Required field, but initialized with empty string
+        options: [""], // Required field, initialized with empty array containing empty string
         prices: ["0"],
         required: false,
         multiSelect: false,
+      } as {
+        name: string;
+        options: string[];
+        prices?: string[];
+        required?: boolean;
+        multiSelect?: boolean;
       },
     ]);
   };

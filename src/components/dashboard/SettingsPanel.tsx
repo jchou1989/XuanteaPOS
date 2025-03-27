@@ -12,6 +12,7 @@ import { Switch } from "../ui/switch";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import { Separator } from "../ui/separator";
+import { Badge } from "../ui/badge";
 import {
   Printer,
   CreditCard,
