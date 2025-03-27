@@ -189,8 +189,8 @@ const MenuItemForm = ({
         prices: ["0"],
         required: false,
         multiSelect: false,
-      },
-    ] as FormValues["customizationOptions"]);
+      } as z.infer<typeof formSchema>["customizationOptions"][number],
+    ]);
   };
 
   const removeCustomizationOption = (index: number) => {
